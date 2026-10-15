@@ -1,0 +1,44 @@
+/*
+ * Dark swatch for the Telerik "Default" theme.
+ *
+ * The installed Telerik package ships only light swatches, so instead of pointing
+ * the <link> at a prebuilt dark CSS we flip the theme's neutral *anchor* tokens.
+ * Every other neutral token (text, hovers, borders, raised surfaces) is derived
+ * from these via oklch(from var(...)) relative color, so the whole component set -
+ * including grids and popups rendered at the body root - recomputes to dark.
+ * The semantic colors (primary/info/success/warning/error) are left untouched;
+ * they read well on a dark surface.
+ *
+ * Loaded after kendo-theme-default/all.css, so this :root wins on document order.
+ */
+:root {
+    --kendo-color-app-surface: oklch(20% 0 0deg);   /* page background */
+    --kendo-color-surface: oklch(24% 0 0deg);       /* cards / raised surfaces */
+    --kendo-color-base: oklch(28% 0 0deg);          /* inputs, buttons, grid base */
+    --kendo-color-subtle: oklch(68% 0 0deg);        /* muted text */
+    --kendo-color-border: oklch(100% 0 0deg / 0.14);
+    --kendo-color-border-alt: oklch(100% 0 0deg / 0.26);
+    --kendo-color-inverse: oklch(90% 0 0deg);       /* tooltips etc. flip to light */
+}
+
+/*
+ * Chart series palette, in the order the charts assign it.
+ *
+ * The stock theme derives all six series from one red anchor by rotating its hue,
+ * which puts red first and green third. On a board where a reader scans for trouble,
+ * a colour already carrying meaning should not land on an arbitrary series, so green
+ * and red are pushed to the end of the order and the cool hues lead.
+ *
+ * Listing a-f explicitly replaces the anchor derivation; the -bold / -subtle variants
+ * still derive from each of these, so they follow automatically.
+ */
+:root {
+    --kendo-color-series: oklch(66% 0.165 255deg);   /* unused once a-f are explicit; kept in step with series-a */
+
+    --kendo-color-series-a: oklch(66% 0.165 255deg); /* blue */
+    --kendo-color-series-b: oklch(62% 0.190 296deg); /* purple */
+    --kendo-color-series-c: oklch(76% 0.115 205deg); /* teal */
+    --kendo-color-series-d: oklch(81% 0.145 82deg);  /* amber */
+    --kendo-color-series-e: oklch(73% 0.165 150deg); /* green */
+    --kendo-color-series-f: oklch(64% 0.195 27deg);  /* red */
+}

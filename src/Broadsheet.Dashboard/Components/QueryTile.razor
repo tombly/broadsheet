@@ -1,0 +1,52 @@
+<div class="tile @(Chart.Visualization == VisualizationTypes.Stat ? "tile-stat" : "")" style="grid-column: span @Span">
+    <div class="tile-head">@Title</div>
+    <div class="tile-body">
+        @if (Outcome is null)
+        {
+            <div class="tile-empty">Loading...</div>
+        }
+        else if (!Outcome.Ok)
+        {
+            <div class="tile-error" title="@Outcome.Error">@Outcome.Error</div>
+        }
+        else if (Chart.Visualization == VisualizationTypes.Stat)
+        {
+            <StatTile Table="@Outcome.Table" />
+        }
+        else if (Chart.Visualization == VisualizationTypes.Table)
+        {
+            <GridTile Table="@Outcome.Table" />
+        }
+        else
+        {
+            <ChartTile Visualization="@Chart.Visualization" Table="@Outcome.Table" Height="@ChartHeight" Span="@Span" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public BoardChart Chart { get; set; } = default!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    [Parameter] public QueryOutcome? Outcome { get; set; }
+
+    // The board lays out twelve columns, so a percentage becomes a span: a quarter is three
+    // columns, a third is four, half is six. A workbook that names no width means the whole row.
+    private const int Columns = 12;
+
+    private int Span => Chart.WidthPercent is { } percent
+        ? Math.Clamp((int)Math.Round(percent / 100 * Columns), 1, Columns)
+        : Columns;
+
+    // Eyeballed against how the portal draws the same four sizes; a workbook that names no size,
+    // or one this does not recognise, keeps the middle of the ladder.
+    private string ChartHeight => Chart.Height switch
+    {
+        TileHeight.Small => "220px",
+        TileHeight.Medium => "300px",
+        TileHeight.Large => "380px",
+        TileHeight.Full => "460px",
+        _ => "300px"
+    };
+}

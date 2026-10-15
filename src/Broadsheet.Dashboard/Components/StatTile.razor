@@ -1,0 +1,111 @@
+@if (_stats.Count == 0)
+{
+    <div class="tile-empty">No data in range</div>
+}
+else
+{
+    <div class="stat-grid">
+        @foreach (var stat in _stats)
+        {
+            <div class="stat-card">
+                <div class="stat-value">@stat.Value@if (stat.Suffix.Length > 0) {<span class="stat-suffix">@stat.Suffix</span>}</div>
+                <div class="stat-label">@stat.Label</div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public QueryResultTable? Table { get; set; }
+
+    private record Stat(string Label, string Value, string Suffix);
+
+    private List<Stat> _stats = [];
+
+    // Descending so the largest matching unit wins. Suffix is rendered smaller than the number.
+    private static readonly (double Divisor, string Suffix)[] Units =
+    [
+        (1_000_000_000, "B"),
+        (1_000_000, "M"),
+        (1_000, "K"),
+    ];
+
+    protected override void OnParametersSet()
+    {
+        var rows = Table?.AsRecords().ToList();
+        if (rows is null || rows.Count == 0)
+        {
+            _stats = [];
+            return;
+        }
+
+        // A tiles query commonly unpivots its stat row to Label/Value so the portal renders one tile
+        // per row; consume that shape directly.
+        if (Table!.Columns.Count == 2 && Table.Columns.Contains("Label") && Table.Columns.Contains("Value"))
+        {
+            _stats = rows
+                .Select(row =>
+                {
+                    var (value, suffix) = Format(Unbox(row.GetValueOrDefault("Value")));
+                    return new Stat(row.GetValueOrDefault("Label")?.ToString() ?? string.Empty, value, suffix);
+                })
+                .ToList();
+            return;
+        }
+
+        _stats = Table.Columns
+            .Select(column =>
+            {
+                var (value, suffix) = Format(rows[0].GetValueOrDefault(column));
+                return new Stat(column, value, suffix);
+            })
+            .ToList();
+    }
+
+    // Unpivoting stringifies every value, so counts arrive as text. Only whole numbers are re-read as
+    // numeric: 'v2.5' and a bare '2.5' both stay verbatim rather than rounding to an integer.
+    private static object? Unbox(object? value)
+    {
+        return value is string text && long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
+            ? number
+            : value;
+    }
+
+    // Abbreviates numeric counts as 1.5K / 12K / 2.3M. Returns the number and its unit suffix separately
+    // so the suffix can be styled smaller. Below 1,000 stays a plain separated integer (no suffix).
+    // String values (e.g. a '2.5' version) are passed through verbatim - we deliberately do NOT parse
+    // them as numbers, or a Major.Minor version would get rounded to a bare integer.
+    private static (string Value, string Suffix) Format(object? value)
+    {
+        double? number = value switch
+        {
+            null => null,
+            long l => l,
+            int i => i,
+            double d => d,
+            decimal m => (double)m,
+            _ => null
+        };
+
+        if (number is null)
+        {
+            return (value?.ToString() ?? "-", string.Empty);
+        }
+
+        var n = number.Value;
+        foreach (var (divisor, suffix) in Units)
+        {
+            if (Math.Abs(n) >= divisor)
+            {
+                // A decimal earns its place only below ten, where it still carries information:
+                // 1,540 -> "1.5K", but 123,456 -> "123K" rather than four significant figures.
+                var scaled = n / divisor;
+                var format = Math.Abs(scaled) < 10 ? "0.#" : "0";
+
+                return (scaled.ToString(format, CultureInfo.CurrentCulture), suffix);
+            }
+        }
+
+        return (n.ToString("N0", CultureInfo.CurrentCulture), string.Empty);
+    }
+}

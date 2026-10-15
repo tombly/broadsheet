@@ -1,0 +1,200 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@if (Table is null || Table.Rows.Count == 0)
+{
+    <div class="tile-empty">No data in range</div>
+}
+else if (_isCategory)
+{
+    <TelerikChart @ref="_chart" Height="@Height" Width="100%">
+        <ChartSeriesItems>
+            <ChartSeries Type="@_seriesType"
+                         Data="@_categories"
+                         Field="@nameof(CategoryPoint.Value)"
+                         CategoryField="@nameof(CategoryPoint.Category)">
+                @* Percentage slice labels apply to pies only; on bars the axis already shows the count. *@
+                @if (_seriesType == ChartSeriesType.Pie)
+                {
+                    @* Center keeps labels inside the slices; OutsideEnd callouts overflow the narrow tile and clip. *@
+                    <ChartSeriesLabels Visible="true" Position="ChartSeriesLabelsPosition.Center" Color="#ffffff" Background="rgba(0,0,0,0.55)" Template="#= (percentage * 100).toFixed(1) #%" />
+                }
+            </ChartSeries>
+        </ChartSeriesItems>
+        @* A horizontal bar puts its values along the bottom, where a label costs width rather than
+           height, so this axis needs thinning harder than a line chart's upright one. A pie has no
+           axes at all. *@
+        @if (_seriesType != ChartSeriesType.Pie)
+        {
+            <ChartValueAxes>
+                <ChartValueAxis>
+                    <ChartValueAxisLabels Step="@BarValueStep" Template="@CompactNumber" />
+                    <ChartValueAxisMajorGridLines Step="@BarValueStep" />
+                </ChartValueAxis>
+            </ChartValueAxes>
+        }
+        <ChartLegend Position="ChartLegendPosition.Bottom" Visible="@(_seriesType == ChartSeriesType.Pie)" />
+    </TelerikChart>
+}
+else
+{
+    <TelerikChart @ref="_chart" Height="@Height" Width="100%">
+        <ChartSeriesItems>
+            @foreach (var series in _series)
+            {
+                <ChartSeries Type="@_seriesType"
+                             Name="@series.Name"
+                             Data="@series.Points"
+                             Field="@nameof(ChartPoint.Value)"
+                             CategoryField="@nameof(ChartPoint.X)">
+                    <ChartSeriesMarkers Visible="false" />
+                    @* Area tiles are parts-of-a-whole breakdowns, so stack them to show cumulative
+                       totals; line tiles stay overlaid for series comparison. *@
+                    @if (_seriesType == ChartSeriesType.Area)
+                    {
+                        <ChartSeriesStack Enabled="true" />
+                    }
+                </ChartSeries>
+            }
+        </ChartSeriesItems>
+        <ChartCategoryAxes>
+            <ChartCategoryAxis Type="ChartCategoryAxisType.Date"
+                               BaseUnit="ChartCategoryAxisBaseUnit.Fit"
+                               MaxDateGroups="@_maxDateGroups">
+                <ChartCategoryAxisLabels Step="@_labelStep" />
+                @* One group per queried bucket keeps the data honest, but that is 50-150 gridlines
+                   across the plot. Draw one only where a label is, so the two line up. *@
+                <ChartCategoryAxisMajorGridLines Step="@_labelStep" />
+                <ChartCategoryAxisMajorTicks Step="@_labelStep" />
+            </ChartCategoryAxis>
+        </ChartCategoryAxes>
+        <ChartValueAxes>
+            <ChartValueAxis>
+                <ChartValueAxisLabels Step="@ValueStep" />
+                <ChartValueAxisMajorGridLines Step="@ValueStep" />
+            </ChartValueAxis>
+        </ChartValueAxes>
+        <ChartLegend Position="ChartLegendPosition.Bottom" Visible="@(_series.Count > 1)" />
+    </TelerikChart>
+}
+
+@code {
+    [Parameter, EditorRequired] public VisualizationTypes Visualization { get; set; }
+
+    [Parameter, EditorRequired] public QueryResultTable? Table { get; set; }
+
+    [Parameter] public string Height { get; set; } = "300px";
+
+    /// <summary>Columns of twelve this tile occupies, which is how wide its plot area actually is.</summary>
+    [Parameter] public int Span { get; set; } = 12;
+
+    // Floor for the date groups the axis creates, used only when a series has fewer points than this.
+    // MaxDateGroups must never sit below the number of buckets the query returned: with BaseUnit=Fit,
+    // Telerik collapses excess buckets into fewer groups using a max aggregate, which hides dips
+    // (e.g. weekend lows vanish into each week's peak). So the real driver is
+    // the queried bucket count; these are just sensible minimums for sparse data. Telerik thins the
+    // axis labels on its own when groups are dense, so a point-per-bucket does not crowd the ticks.
+    private const int NarrowDateGroups = 6;
+    private const int WideDateGroups = 12;
+
+    // Every bucket is plotted (see _maxDateGroups), but only every Nth date label is drawn so the
+    // axis stays legible. How many fit is a question about width, not about the data: a tile at a
+    // quarter of the row has a quarter of the room for dates.
+    private int TargetLabelCount => Span switch
+    {
+        <= 4 => 4,
+        <= 8 => 6,
+        _ => 8
+    };
+
+    // Telerik picks the value ticks from the plot height; on a short, narrow tile that lands denser
+    // than a wall display can read, so every other gridline and label is dropped there.
+    private int ValueStep => Span <= 4 ? 2 : 1;
+
+    private int BarValueStep => Span switch
+    {
+        <= 4 => 3,
+        <= 8 => 2,
+        _ => 1
+    };
+
+    // Thousands as "9k" so a value label costs four characters instead of nine.
+    private const string CompactNumber = "#= value >= 1000 ? (value / 1000) + 'k' : value #";
+
+    private TelerikChart? _chart;
+    private DotNetObjectReference<ChartTile>? _self;
+    private int _subscription;
+
+    private bool _isCategory;
+    private ChartSeriesType _seriesType;
+    private IReadOnlyList<ChartSeriesData> _series = [];
+    private IReadOnlyList<CategoryPoint> _categories = [];
+    private int _maxDateGroups = NarrowDateGroups;
+    private double _labelStep = 1;
+
+    protected override void OnParametersSet()
+    {
+        _seriesType = Visualization switch
+        {
+            VisualizationTypes.TimeChart => ChartSeriesType.Line,
+            VisualizationTypes.AreaChart => ChartSeriesType.Area,
+            // Horizontal bars: category labels are often long and crowd the x-axis as columns.
+            VisualizationTypes.BarChart => ChartSeriesType.Bar,
+            VisualizationTypes.PieChart => ChartSeriesType.Pie,
+            _ => ChartSeriesType.Line
+        };
+
+        _isCategory = Visualization is VisualizationTypes.BarChart or VisualizationTypes.PieChart;
+
+        if (Table is null || Table.Rows.Count == 0)
+        {
+            _series = [];
+            _categories = [];
+            return;
+        }
+
+        if (_isCategory)
+        {
+            _categories = ChartData.Categories(Table);
+        }
+        else
+        {
+            _series = ChartData.TimeSeries(Table);
+
+            // Give every queried bucket its own group so no data is max-collapsed away; the width-based
+            // floor only kicks in when the query returned fewer buckets than that.
+            var floor = Visualization == VisualizationTypes.AreaChart ? WideDateGroups : NarrowDateGroups;
+            var buckets = _series.SelectMany(series => series.Points).Select(point => point.X).Distinct().Count();
+            _maxDateGroups = Math.Max(floor, buckets);
+            _labelStep = Math.Max(1, Math.Ceiling((double)_maxDateGroups / TargetLabelCount));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _self = DotNetObjectReference.Create(this);
+        _subscription = await JS.InvokeAsync<int>("broadsheet.subscribeResize", _self);
+    }
+
+    /// <summary>Redraws at the container's new width. Called from the host's debounced resize listener.</summary>
+    [JSInvokable]
+    public void OnViewportResized() => _chart?.Refresh();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_subscription != 0)
+                await JS.InvokeVoidAsync("broadsheet.unsubscribeResize", _subscription);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The webview is already gone, so there is no listener left to unhook.
+        }
+
+        _self?.Dispose();
+    }
+}

@@ -1,0 +1,42 @@
+.tile {
+    border: 1px solid var(--kendo-color-border);
+    border-radius: 10px;
+    background: var(--kendo-color-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+    overflow: hidden;
+}
+
+/* KPI strip: short, just tall enough for the squares. */
+.tile-stat {
+    min-height: 0;
+}
+
+.tile-head {
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 14px;
+    border-bottom: 1px solid var(--kendo-color-border);
+}
+
+.tile-body {
+    padding: 10px 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.tile-empty {
+    color: var(--kendo-color-subtle);
+    font-size: 13px;
+    padding: 24px 0;
+    text-align: center;
+}
+
+.tile-error {
+    color: var(--kendo-color-error);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

@@ -1,0 +1,15 @@
+bin/
+obj/
+.DS_Store
+.vs/
+.idea/
+telerik-license.txt
+.claude/settings.local.json
+*.user
+.vscode/
+
+# Can carry secrets: MSBuild binlogs record environment variables (e.g. TELERIK_LICENSE).
+*.binlog
+.env
+*.pfx
+*.p12

@@ -1,0 +1,88 @@
+.dash {
+    padding-bottom: 32px;
+}
+
+.dash-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    position: sticky;
+    top: 0;
+    background: var(--kendo-color-app-surface);
+    border-bottom: 1px solid var(--kendo-color-border);
+    z-index: 5;
+    flex-wrap: wrap;
+}
+
+.brand {
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+}
+
+.filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.field-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--kendo-color-subtle);
+}
+
+.status {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--kendo-color-subtle);
+}
+
+.status-busy {
+    color: var(--kendo-color-info);
+}
+
+.banner {
+    margin: 12px 20px;
+    padding: 10px 14px;
+    background: var(--kendo-color-error-subtle);
+    border: 1px solid var(--kendo-color-error);
+    color: var(--kendo-color-error-emphasis);
+    border-radius: 8px;
+}
+
+.dash-section {
+    padding: 8px 20px;
+}
+
+.dash-section h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--kendo-color-subtle);
+    margin: 16px 0 8px;
+}
+
+/* Twelve columns so a tile can span the workbook's own percentage of the row. */
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+}
+
+/* Below a wall display's width the fractions stop being readable, so every tile takes the row.
+   The span is set inline per tile, which only !important can override. */
+@media (max-width: 900px) {
+    .tiles > * {
+        grid-column: 1 / -1 !important;
+    }
+}
+

@@ -1,0 +1,55 @@
+@if (_records.Count == 0)
+{
+    <div class="tile-empty">No data in range</div>
+}
+else
+{
+    <TelerikGrid Data="@_records"
+                 Sortable="true"
+                 Pageable="@(_records.Count > PageSize)"
+                 PageSize="@PageSize"
+                 Height="@Height">
+        <GridColumns>
+            @foreach (var column in _columns)
+            {
+                <GridColumn Field="@column" Title="@column" FieldType="@_columnTypes[column]" />
+            }
+        </GridColumns>
+    </TelerikGrid>
+}
+
+@code {
+    [Parameter, EditorRequired] public QueryResultTable? Table { get; set; }
+
+    [Parameter] public int PageSize { get; set; } = 10;
+
+    [Parameter] public string Height { get; set; } = "320px";
+
+    private IReadOnlyList<string> _columns = [];
+    private List<Dictionary<string, object>> _records = [];
+    private Dictionary<string, Type> _columnTypes = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Table is null)
+        {
+            _columns = [];
+            _records = [];
+            _columnTypes = [];
+            return;
+        }
+
+        _columns = Table.Columns;
+        _records = Table.AsRecords()
+            .Select(record => record.ToDictionary(cell => cell.Key, cell => cell.Value!))
+            .ToList();
+
+        // Telerik requires an explicit FieldType per column when bound to dynamic
+        // (Dictionary) objects. Infer it from the first non-null cell in each column.
+        _columnTypes = _columns.ToDictionary(
+            column => column,
+            column => _records
+                .Select(record => record.GetValueOrDefault(column))
+                .FirstOrDefault(value => value is not null)?.GetType() ?? typeof(string));
+    }
+}

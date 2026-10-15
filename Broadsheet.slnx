@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Broadsheet.Smoke/Broadsheet.Smoke.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Broadsheet.Dashboard/Broadsheet.Dashboard.csproj" />
+    <Project Path="src/Broadsheet.Telemetry/Broadsheet.Telemetry.csproj" />
+    <Project Path="src/Broadsheet.Ui/Broadsheet.Ui.csproj" />
+  </Folder>
+</Solution>

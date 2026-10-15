@@ -1,0 +1,78 @@
+<div class="dash">
+    <header class="dash-bar">
+        <span class="brand">Broadsheet</span>
+
+        <div class="filters">
+            <span class="field">
+                <span class="field-label">Board</span>
+                <TelerikDropDownList Data="@_boards" TextField="Name" ValueField="ResourceId" Value="@_boardId"
+                                     ValueChanged="@((string id) => SelectBoard(id))" Width="260px" />
+            </span>
+            <span class="field">
+                <span class="field-label">Time range (@GrainLabel bins)</span>
+                <TelerikDropDownList Data="@Ranges" TextField="Label" ValueField="Key" @bind-Value="@_rangeKey" OnChange="@OnFilterChanged" Width="160px" />
+            </span>
+
+            @foreach (var parameter in Pickers)
+            {
+                <span class="field">
+                    <span class="field-label">@(string.IsNullOrWhiteSpace(parameter.Label) ? parameter.Name : parameter.Label)</span>
+                    <TelerikDropDownList Data="@_parameters!.Options[parameter.Name]" TextField="Label" ValueField="Value"
+                                         Value="@_parameters!.Value(parameter.Name)"
+                                         ValueChanged="@((string value) => OnParameterChanged(parameter.Name, value))"
+                                         Width="150px" />
+                </span>
+            }
+
+            <span class="field">
+                <span class="field-label">Rotation</span>
+                <TelerikDropDownList Data="@Rotations" @bind-Value="@_rotation" Width="130px" />
+            </span>
+            <TelerikButton OnClick="@(async () => await Refresh())" ThemeColor="primary">Refresh</TelerikButton>
+        </div>
+
+        <span class="status">
+            @if (_isRefreshing)
+            {
+                <span class="status-busy">Refreshing @_completed/@ChartCount...</span>
+            }
+            else if (_lastRefresh is not null)
+            {
+                <span>Updated @_lastRefresh.Value.ToLocalTime().ToString("t")</span>
+            }
+        </span>
+    </header>
+
+    @if (_authError is not null)
+    {
+        <div class="banner">@_authError</div>
+    }
+    else if (Options.Subscriptions.Count == 0)
+    {
+        <div class="banner">@BroadsheetOptions.SetupHint</div>
+    }
+
+    @if (_model is not null && _model.Sections.Count == 0)
+    {
+        <div class="tile-empty">This board has no Logs queries to render.</div>
+    }
+
+    @foreach (var section in _model?.Sections ?? [])
+    {
+        var charts = VisibleCharts(section);
+        if (charts.Count == 0)
+        {
+            continue;
+        }
+
+        <section class="dash-section">
+            <h2>@Text(section.Label)</h2>
+            <div class="tiles">
+                @foreach (var chart in charts)
+                {
+                    <QueryTile Chart="@chart" Title="@Text(chart.Title)" Outcome="@Outcome(chart)" />
+                }
+            </div>
+        </section>
+    }
+</div>

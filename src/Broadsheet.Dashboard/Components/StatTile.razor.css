@@ -1,0 +1,43 @@
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    height: 100%;
+    align-content: center;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 12px;
+    border: 1px solid var(--kendo-color-border);
+    border-radius: 10px;
+    background: var(--kendo-color-base);
+}
+
+.stat-value {
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--kendo-color-on-app-surface);
+    font-variant-numeric: tabular-nums;
+}
+
+/* K / M / B unit, sized down from the number it trails. */
+.stat-suffix {
+    font-size: 0.5em;
+    font-weight: 600;
+    margin-left: 1px;
+    color: var(--kendo-color-subtle);
+}
+
+.stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--kendo-color-subtle);
+}
